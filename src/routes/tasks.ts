@@ -1,0 +1,172 @@
+import { taskQueries } from "../db/queries";
+import { authMiddleware } from "../middleware/auth";
+import { Elysia, t } from "elysia";
+import type { CreateTaskInput, UpdateTaskInput } from "../types";
+
+export const taskRoutes = new Elysia({ prefix: "/api" })
+  .use(authMiddleware)
+  .get("/tasks", ({ userId }) => {
+    if (!userId) return [];
+    const tasks = taskQueries.findAllTasks(userId);
+    return tasks;
+  })
+  .get(
+    "/tasks/:id",
+    ({ params, userId, set }) => {
+      if (!userId) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+          message: "Invalid token",
+        };
+      }
+
+      const task = taskQueries.findTaskById(parseInt(params.id as string, 10), userId);
+
+      if (!task) {
+        set.status = 404;
+        return {
+          error: "Not Found",
+          message: "Task not found",
+        };
+      }
+
+      return task;
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/tasks",
+    ({ body, userId, set }) => {
+      if (!userId) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+          message: "Invalid token",
+        };
+      }
+
+      const taskInput = body as CreateTaskInput;
+
+      try {
+        const result = taskQueries.createTask({
+          ...taskInput,
+          userId,
+        });
+
+        const task = taskQueries.findTaskById(result.lastInsertRowid, userId);
+
+        set.status = 201;
+        return task;
+      } catch (error) {
+        console.error("Create task error:", error);
+        set.status = 400;
+        return {
+          error: "Bad Request",
+          message: "Failed to create task",
+        };
+      }
+    },
+    {
+      body: t.Object({
+        title: t.String({ minLength: 1 }),
+        description: t.Optional(t.String()),
+        status: t.Union([t.Literal("pending"), t.Literal("done")]),
+      }),
+    },
+  )
+  .put(
+    "/tasks/:id",
+    ({ params, body, userId, set }) => {
+      if (!userId) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+          message: "Invalid token",
+        };
+      }
+
+      const taskId = parseInt(params.id as string, 10);
+      const taskInput = body as UpdateTaskInput;
+
+      const existingTask = taskQueries.findTaskById(taskId, userId);
+
+      if (!existingTask) {
+        set.status = 404;
+        return {
+          error: "Not Found",
+          message: "Task not found",
+        };
+      }
+
+      try {
+        taskQueries.updateTask({
+          ...taskInput,
+          id: taskId,
+          userId,
+        });
+
+        const updatedTask = taskQueries.findTaskById(taskId, userId);
+
+        return updatedTask;
+      } catch (error) {
+        console.error("Update task error:", error);
+        set.status = 400;
+        return {
+          error: "Bad Request",
+          message: "Failed to update task",
+        };
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Partial(
+        t.Object({
+          title: t.String({ minLength: 1 }),
+          description: t.String(),
+          status: t.Union([t.Literal("pending"), t.Literal("done")]),
+        }),
+      ),
+    },
+  )
+  .delete(
+    "/tasks/:id",
+    ({ params, userId, set }) => {
+      if (!userId) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+          message: "Invalid token",
+        };
+      }
+
+      const taskId = parseInt(params.id as string, 10);
+
+      const existingTask = taskQueries.findTaskById(taskId, userId);
+
+      if (!existingTask) {
+        set.status = 404;
+        return {
+          error: "Not Found",
+          message: "Task not found",
+        };
+      }
+
+      taskQueries.deleteTask(taskId, userId);
+
+      return {
+        message: "Task deleted successfully",
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    },
+  );

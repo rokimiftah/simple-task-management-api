@@ -4,15 +4,18 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "format": "prettier --write .",
-    "lint:typecheck": "biome check --write --unsafe . && tsc --noEmit && cd convex && tsc --noEmit"
+    "lint:typecheck": "biome check --write --unsafe . && tsc --noEmit"
   },
   "dependencies": {
+    "better-sqlite3": "latest",
     "elysia": "latest"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
     "@ianvs/prettier-plugin-sort-imports": "latest",
+    "@types/better-sqlite3": "latest",
     "bun-types": "latest",
-    "prettier": "latest"
+    "prettier": "latest",
+    "typescript": "latest"
   }
 }
