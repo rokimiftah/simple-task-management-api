@@ -1,0 +1,13 @@
+{
+  "importOrder": ["<TYPES>", "", "<BUILTIN_MODULES>"],
+
+  "importOrderParserPlugins": ["typescript", "jsx", "decorators"],
+
+  "importOrderTypeScriptVersion": "5.0.0",
+
+  "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+
+  "printWidth": 130,
+
+  "useTabs": false
+}

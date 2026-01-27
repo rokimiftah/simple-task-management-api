@@ -3,12 +3,16 @@
   "module": "src/index.js",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --write .",
+    "lint:typecheck": "biome check --write --unsafe . && tsc --noEmit && cd convex && tsc --noEmit"
   },
   "dependencies": {
     "elysia": "latest"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@biomejs/biome": "latest",
+    "@ianvs/prettier-plugin-sort-imports": "latest",
+    "bun-types": "latest",
+    "prettier": "latest"
   }
 }
