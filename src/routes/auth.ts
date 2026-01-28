@@ -3,7 +3,7 @@ import { generateToken } from "../middleware/auth";
 import { Elysia, t } from "elysia";
 import type { CreateUserInput, LoginInput, LoginResponse, UserResponse } from "../types";
 
-export const authRoutes = new Elysia({ prefix: "/api" })
+export const authRoutes = new Elysia({ prefix: "/auth" })
   .post(
     "/register",
     async ({ body, set }) => {

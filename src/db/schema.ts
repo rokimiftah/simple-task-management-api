@@ -1,6 +1,7 @@
-import db from "./index";
+import { getDb } from "./index";
 
 export function initializeDatabase(): void {
+  const db = getDb();
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

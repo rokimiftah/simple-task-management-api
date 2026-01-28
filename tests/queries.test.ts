@@ -1,18 +1,24 @@
-import db from "../src/db/index";
+import { getDb, resetDb } from "../src/db/index";
 import { authQueries, taskQueries } from "../src/db/queries";
 import { initializeDatabase } from "../src/db/schema";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 describe("Queries", () => {
   let testUserId: number;
 
-  beforeEach(() => {
+  beforeAll(() => {
+    process.env.DATABASE_PATH = ":memory:";
+    resetDb();
     initializeDatabase();
+  });
+
+  beforeEach(() => {
     const user = authQueries.createUser({ name: "Test User", email: `test-${Date.now()}@example.com`, password: "password" });
     testUserId = user.lastInsertRowid as number;
   });
 
   afterEach(() => {
+    const db = getDb();
     db.prepare("DELETE FROM tasks WHERE user_id = ?").run(testUserId);
     db.prepare("DELETE FROM users WHERE id = ?").run(testUserId);
   });

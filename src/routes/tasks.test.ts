@@ -1,5 +1,6 @@
-import db from "../db";
+import { getDb, resetDb } from "../db";
 import { authQueries } from "../db/queries";
+import { initializeDatabase } from "../db/schema";
 import { generateToken } from "../middleware/auth";
 import { taskRoutes } from "../routes/tasks";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -10,6 +11,10 @@ describe("GET /tasks with pagination", () => {
   let authToken: string;
 
   beforeAll(() => {
+    process.env.DATABASE_PATH = ":memory:";
+    resetDb();
+    initializeDatabase();
+
     const hashedPassword = "$2b$10$testHashedPasswordForTesting";
     const user = authQueries.createUser({
       name: "Test User",
@@ -19,6 +24,7 @@ describe("GET /tasks with pagination", () => {
     testUserId = user.lastInsertRowid as number;
     authToken = generateToken(testUserId);
 
+    const db = getDb();
     for (let i = 1; i <= 25; i++) {
       db.prepare("INSERT INTO tasks (title, description, status, user_id) VALUES (?, ?, ?, ?)").run(
         `Task ${i}`,
@@ -30,6 +36,7 @@ describe("GET /tasks with pagination", () => {
   });
 
   afterAll(() => {
+    const db = getDb();
     db.prepare("DELETE FROM tasks WHERE user_id = ?").run(testUserId);
     db.prepare("DELETE FROM users WHERE id = ?").run(testUserId);
   });

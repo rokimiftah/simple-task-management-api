@@ -1,6 +1,7 @@
-import db from "./index";
+import { getDb, resetDb } from "./index";
 import { authQueries, taskQueries } from "./queries";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { initializeDatabase } from "./schema";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { CreateTaskInput } from "../types";
 
 describe("taskQueries", () => {
@@ -9,6 +10,12 @@ describe("taskQueries", () => {
   let _taskId2: number;
   let _taskId3: number;
   let deletedTaskId: number;
+
+  beforeAll(() => {
+    process.env.DATABASE_PATH = ":memory:";
+    resetDb();
+    initializeDatabase();
+  });
 
   beforeEach(() => {
     const user = authQueries.createUser({ name: "Test User", email: `test-${Date.now()}@example.com`, password: "password" });
@@ -28,6 +35,7 @@ describe("taskQueries", () => {
   });
 
   afterEach(() => {
+    const db = getDb();
     db.prepare("DELETE FROM tasks WHERE user_id = ?").run(testUserId);
     db.prepare("DELETE FROM users WHERE id = ?").run(testUserId);
   });
@@ -82,6 +90,7 @@ describe("taskQueries", () => {
     test("does not delete task from database", () => {
       taskQueries.deleteTask(taskId1, testUserId);
 
+      const db = getDb();
       const stmt = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE id = ?");
       const result = stmt.get(taskId1) as { count: number };
       expect(result.count).toBe(1);
