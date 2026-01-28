@@ -21,11 +21,18 @@ SSH to your VPS and run:
 # Create deployment directory
 mkdir -p /root/eplc-test-api
 
+# Clone repository
+cd /root/eplc-test-api
+git clone <your-repo-url> .
+
 # Install Bun
 curl -fsSL https://bun.sh/install | bash
 echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 mv ~/.bun/bin/* /usr/local/bin/
+
+# Install dependencies
+bun install
 
 # Install Caddy (if not already installed)
 apt install -y debian-keyring debian-archive-keyring apt-transport-https

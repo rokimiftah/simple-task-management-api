@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  Build-and-Deploy:
+  Deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,38 +21,14 @@ jobs:
           chmod 400 ~/.ssh/id_ed25519
           ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies and archive
-        run: |
-          bun install --frozen-lockfile
-          tar -czf build.tar.gz src/ node_modules/ package.json
-
-      - name: Upload build to VPS
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.TARGET_DIRECTORY }}"
-          scp -i ~/.ssh/id_ed25519 build.tar.gz ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_DIRECTORY }}/build.tar.gz
-
-      - name: Deploy application on VPS
+      - name: Deploy to VPS
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.TARGET_DIRECTORY }}
-            if [ -f build.tar.gz ]; then
-              rm -rf src node_modules package.json.bak
-              mv package.json package.json.bak 2>/dev/null || true
-              tar -xzvf build.tar.gz
-              rm -f build.tar.gz
-              systemctl restart eplc-test-api
-              systemctl status eplc-test-api --no-pager
-              caddy reload -c /etc/caddy/Caddyfile
-            else
-              echo 'Error: build.tar.gz not found'
-              exit 1
-            fi
+            git fetch origin main
+            git reset --hard origin/main
+            bun install --frozen-lockfile
+            systemctl restart eplc-test-api
+            systemctl status eplc-test-api --no-pager
+            caddy reload -c /etc/caddy/Caddyfile
           "
