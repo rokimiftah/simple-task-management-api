@@ -1,4 +1,5 @@
 import { initializeDatabase } from "./db/schema";
+import { loggerMiddleware } from "./middleware/logger";
 import { authRoutes } from "./routes/auth";
 import { taskRoutes } from "./routes/tasks";
 import { openapi } from "@elysiajs/openapi";
@@ -7,6 +8,7 @@ import { Elysia } from "elysia";
 initializeDatabase();
 
 const app = new Elysia()
+  .use(loggerMiddleware)
   .use(authRoutes)
   .use(taskRoutes)
   .get("/health", () => ({ status: "ok", timestamp: new Date().toISOString() }), {
