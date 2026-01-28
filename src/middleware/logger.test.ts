@@ -29,13 +29,13 @@ describe("loggerMiddleware", () => {
   });
 
   test("logs POST requests", async () => {
-    const app = new Elysia().use(loggerMiddleware).post("/api/tasks", () => ({ id: 1 }));
+    const app = new Elysia().use(loggerMiddleware).post("/tasks", () => ({ id: 1 }));
 
-    await app.handle(new Request("http://localhost/api/tasks", { method: "POST" }));
+    await app.handle(new Request("http://localhost/tasks", { method: "POST" }));
 
     expect(logCalls.length).toBeGreaterThan(0);
     const logCall = logCalls[0];
-    expect(logCall).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] POST http:\/\/localhost\/api\/tasks - 200 - \d+ms/);
+    expect(logCall).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] POST http:\/\/localhost\/tasks - 200 - \d+ms/);
   });
 
   test("logs errors with error message", async () => {

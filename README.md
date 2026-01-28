@@ -2,6 +2,10 @@
 
 REST API untuk sistem manajemen tugas sederhana dengan fungsionalitas CRUD lengkap, autentikasi berbasis token, dan validasi request.
 
+<div align="center">
+  <h2><a href="https://eplc-test.rokimiftah.id">Link Demo (https://eplc-test.rokimiftah.id)</a></h2>
+</div>
+
 ## Tech Stack
 
 - **Runtime**: Bun 1.3.6
@@ -166,10 +170,26 @@ CREATE TABLE tasks (
   title TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL CHECK(status IN ('pending', 'done')),
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+  due_date DATETIME,
+  tags TEXT,
   user_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted_at DATETIME,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**Task Tags Table:**
+
+```sql
+CREATE TABLE task_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id INTEGER NOT NULL,
+  tag TEXT NOT NULL,
+  UNIQUE(task_id, tag),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 ```
 
@@ -197,7 +217,7 @@ Authorization: Bearer secret-token-123:1
 
 ### Authentication Endpoints
 
-#### POST /api/register
+#### POST /auth/register
 
 Register user baru.
 
@@ -232,7 +252,7 @@ Register user baru.
 
 ---
 
-#### POST /api/login
+#### POST /auth/login
 
 Login dan dapatkan token.
 
@@ -282,9 +302,65 @@ Login dan dapatkan token.
 
 Semua endpoint task memerlukan authentication header.
 
-#### GET /api/tasks
+#### GET /tasks
 
-Get semua tasks milik user yang sedang login.
+Get semua tasks milik user yang sedang login dengan advanced filtering dan sorting.
+
+**Headers:**
+
+```
+Authorization: Bearer secret-token-123:1
+```
+
+**Query Parameters:**
+
+| Parameter       | Type   | Default      | Description                                               |
+| --------------- | ------ | ------------ | --------------------------------------------------------- |
+| `page`          | number | 1            | Page number for pagination                                |
+| `limit`         | number | 10           | Number of items per page (max 100)                        |
+| `priority`      | string | -            | Filter by priority: `low`, `medium`, `high`               |
+| `due_date_from` | string | -            | Filter tasks due after this date (ISO 8601)               |
+| `due_date_to`   | string | -            | Filter tasks due before this date (ISO 8601)              |
+| `tags`          | string | -            | Filter by tags (comma-separated, AND logic)               |
+| `sort_by`       | string | `created_at` | Sort field: `title`, `due_date`, `priority`, `created_at` |
+| `sort_order`    | string | `desc`       | Sort order: `asc`, `desc`                                 |
+| `search`        | string | -            | Search in title and description (max 100 chars)           |
+
+**Response (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Task 1",
+      "description": "Description 1",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2024-12-31T23:59:59Z",
+      "tags": "[\"work\", \"urgent\"]",
+      "user_id": 1,
+      "created_at": "2026-01-27T10:00:00.000Z",
+      "updated_at": "2026-01-27T10:00:00.000Z",
+      "deleted_at": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+---
+
+#### GET /tasks/tags
+
+Get semua unique tags untuk user yang sedang login.
 
 **Headers:**
 
@@ -295,22 +371,14 @@ Authorization: Bearer secret-token-123:1
 **Response (200 OK):**
 
 ```json
-[
-  {
-    "id": 1,
-    "title": "Task 1",
-    "description": "Description 1",
-    "status": "pending",
-    "user_id": 1,
-    "created_at": "2026-01-27T10:00:00.000Z",
-    "updated_at": "2026-01-27T10:00:00.000Z"
-  }
-]
+{
+  "tags": ["work", "personal", "urgent", "project"]
+}
 ```
 
 ---
 
-#### GET /api/tasks/:id
+#### GET /tasks/:id
 
 Get task berdasarkan ID.
 
@@ -328,9 +396,13 @@ Authorization: Bearer secret-token-123:1
   "title": "Task 1",
   "description": "Description 1",
   "status": "pending",
+  "priority": "high",
+  "due_date": "2024-12-31T23:59:59Z",
+  "tags": "[\"work\", \"urgent\"]",
   "user_id": 1,
   "created_at": "2026-01-27T10:00:00.000Z",
-  "updated_at": "2026-01-27T10:00:00.000Z"
+  "updated_at": "2026-01-27T10:00:00.000Z",
+  "deleted_at": null
 }
 ```
 
@@ -354,7 +426,7 @@ Authorization: Bearer secret-token-123:1
 
 ---
 
-#### POST /api/tasks
+#### POST /tasks
 
 Create task baru.
 
@@ -371,7 +443,10 @@ Content-Type: application/json
 {
   "title": "New Task",
   "description": "Task description",
-  "status": "pending"
+  "status": "pending",
+  "priority": "high",
+  "due_date": "2024-12-31T23:59:59Z",
+  "tags": ["work", "urgent"]
 }
 ```
 
@@ -383,9 +458,13 @@ Content-Type: application/json
   "title": "New Task",
   "description": "Task description",
   "status": "pending",
+  "priority": "high",
+  "due_date": "2024-12-31T23:59:59Z",
+  "tags": "[\"work\", \"urgent\"]",
   "user_id": 1,
   "created_at": "2026-01-27T11:00:00.000Z",
-  "updated_at": "2026-01-27T11:00:00.000Z"
+  "updated_at": "2026-01-27T11:00:00.000Z",
+  "deleted_at": null
 }
 ```
 
@@ -394,7 +473,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Bad Request",
-  "message": "Failed to create task"
+  "message": "Maximum 10 tags allowed per task"
 }
 ```
 
@@ -403,10 +482,13 @@ Content-Type: application/json
 - `title`: Required, min 1 character
 - `description`: Optional
 - `status`: Optional, must be 'pending' or 'done' (default: 'pending')
+- `priority`: Optional, must be 'low', 'medium', or 'high' (default: 'medium')
+- `due_date`: Optional, ISO 8601 datetime string
+- `tags`: Optional, array of strings (max 10 tags, max 50 chars each)
 
 ---
 
-#### PUT /api/tasks/:id
+#### PUT /tasks/:id
 
 Update task (partial update).
 
@@ -422,7 +504,10 @@ Content-Type: application/json
 ```json
 {
   "title": "Updated Title",
-  "status": "done"
+  "status": "done",
+  "priority": "low",
+  "due_date": "2025-01-01T00:00:00Z",
+  "tags": ["updated"]
 }
 ```
 
@@ -434,9 +519,13 @@ Content-Type: application/json
   "title": "Updated Title",
   "description": "Description 1",
   "status": "done",
+  "priority": "low",
+  "due_date": "2025-01-01T00:00:00Z",
+  "tags": "[\"updated\"]",
   "user_id": 1,
   "created_at": "2026-01-27T10:00:00.000Z",
-  "updated_at": "2026-01-27T12:00:00.000Z"
+  "updated_at": "2026-01-27T12:00:00.000Z",
+  "deleted_at": null
 }
 ```
 
@@ -469,7 +558,7 @@ Content-Type: application/json
 
 ---
 
-#### DELETE /api/tasks/:id
+#### DELETE /tasks/:id
 
 Delete task.
 
@@ -514,7 +603,7 @@ Authorization: Bearer secret-token-123:1
 **Register User:**
 
 ```bash
-curl -sX POST http://localhost:3000/api/register \
+curl -sX POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
@@ -526,7 +615,7 @@ curl -sX POST http://localhost:3000/api/register \
 **Login:**
 
 ```bash
-curl -sX POST http://localhost:3000/api/login \
+curl -sX POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -547,34 +636,72 @@ export TOKEN="secret-token-123:1"
 **Get All Tasks:**
 
 ```bash
-curl -sX GET http://localhost:3000/api/tasks \
+curl -sX GET http://localhost:3000/tasks \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Get All Tasks with Filters:**
+
+```bash
+# Filter by priority
+curl -sX GET "http://localhost:3000/tasks?priority=high" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Filter by date range
+curl -sX GET "http://localhost:3000/tasks?due_date_from=2024-01-01T00:00:00Z&due_date_to=2024-12-31T23:59:59Z" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Filter by tags (AND logic - task must have all tags)
+curl -sX GET "http://localhost:3000/tasks?tags=work,urgent" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Search in title and description
+curl -sX GET "http://localhost:3000/tasks?search=important" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Sort by priority
+curl -sX GET "http://localhost:3000/tasks?sort_by=priority&sort_order=asc" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Combine multiple filters
+curl -sX GET "http://localhost:3000/tasks?priority=high&tags=urgent&sort_by=due_date&sort_order=asc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Get All Unique Tags:**
+
+```bash
+curl -sX GET http://localhost:3000/tasks/tags \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Get Task by ID:**
 
 ```bash
-curl -sX GET http://localhost:3000/api/tasks/1 \
+curl -sX GET http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Create Task (Full):**
+**Create Task (Full with new fields):**
 
 ```bash
-curl -sX POST http://localhost:3000/api/tasks \
+curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Buy groceries",
     "description": "Milk, eggs, bread",
-    "status": "pending"
+    "status": "pending",
+    "priority": "high",
+    "due_date": "2024-12-31T23:59:59Z",
+    "tags": ["shopping", "urgent"]
   }'
 ```
 
 **Create Task (Minimal):**
 
 ```bash
-curl -sX POST http://localhost:3000/api/tasks \
+curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Simple task"}'
@@ -583,19 +710,21 @@ curl -sX POST http://localhost:3000/api/tasks \
 **Update Task - Multiple Fields:**
 
 ```bash
-curl -sX PUT http://localhost:3000/api/tasks/1 \
+curl -sX PUT http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Updated title",
-    "status": "done"
+    "status": "done",
+    "priority": "low",
+    "tags": ["completed"]
   }'
 ```
 
 **Update Task - Only Status:**
 
 ```bash
-curl -sX PUT http://localhost:3000/api/tasks/1 \
+curl -sX PUT http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "done"}'
@@ -604,16 +733,34 @@ curl -sX PUT http://localhost:3000/api/tasks/1 \
 **Update Task - Only Description:**
 
 ```bash
-curl -sX PUT http://localhost:3000/api/tasks/1 \
+curl -sX PUT http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"description": "Updated description"}'
 ```
 
+**Update Task - Replace Tags:**
+
+```bash
+curl -sX PUT http://localhost:3000/tasks/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tags": ["new-tag", "another-tag"]}'
+```
+
+**Update Task - Clear Tags:**
+
+```bash
+curl -sX PUT http://localhost:3000/tasks/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tags": []}'
+```
+
 **Delete Task:**
 
 ```bash
-curl -sX DELETE http://localhost:3000/api/tasks/1 \
+curl -sX DELETE http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -625,7 +772,7 @@ Script lengkap dari registration sampai task management:
 
 ```bash
 # 1. Register a new user
-curl -sX POST http://localhost:3000/api/register \
+curl -sX POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Alice Johnson",
@@ -634,7 +781,7 @@ curl -sX POST http://localhost:3000/api/register \
   }'
 
 # 2. Login and save token
-export TOKEN=$(curl -s -X POST http://localhost:3000/api/login \
+export TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "alice@example.com",
@@ -644,41 +791,41 @@ export TOKEN=$(curl -s -X POST http://localhost:3000/api/login \
 echo "Token: $TOKEN"
 
 # 3. Create multiple tasks
-curl -sX POST http://localhost:3000/api/tasks \
+curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Complete project documentation", "status": "pending"}'
 
-curl -sX POST http://localhost:3000/api/tasks \
+curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Review pull requests", "description": "Check all open PRs", "status": "pending"}'
 
-curl -sX POST http://localhost:3000/api/tasks \
+curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Deploy to production", "status": "done"}'
 
 # 4. Get all tasks
-curl -sX GET http://localhost:3000/api/tasks \
+curl -sX GET http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN"
 
 # 5. Get a specific task
-curl -sX GET http://localhost:3000/api/tasks/1 \
+curl -sX GET http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN"
 
 # 6. Update a task
-curl -sX PUT http://localhost:3000/api/tasks/1 \
+curl -sX PUT http://localhost:3000/tasks/1 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "done"}'
 
 # 7. Delete a task
-curl -sX DELETE http://localhost:3000/api/tasks/3 \
+curl -sX DELETE http://localhost:3000/tasks/3 \
   -H "Authorization: Bearer $TOKEN"
 
 # 8. Get all tasks again to see changes
-curl -sX GET http://localhost:3000/api/tasks \
+curl -sX GET http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -689,20 +836,20 @@ curl -sX GET http://localhost:3000/api/tasks \
 **Test 401 Unauthorized (Missing Token):**
 
 ```bash
-curl -sX GET http://localhost:3000/api/tasks
+curl -sX GET http://localhost:3000/tasks
 ```
 
 **Test 401 Unauthorized (Invalid Token):**
 
 ```bash
-curl -sX GET http://localhost:3000/api/tasks \
+curl -sX GET http://localhost:3000/tasks \
   -H "Authorization: Bearer invalid-token"
 ```
 
 **Test 404 Not Found (User Not Found):**
 
 ```bash
-curl -sX POST http://localhost:3000/api/login \
+curl -sX POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "nonexistent@example.com",
@@ -713,14 +860,14 @@ curl -sX POST http://localhost:3000/api/login \
 **Test 404 Not Found (Task Not Found):**
 
 ```bash
-curl -sX GET http://localhost:3000/api/tasks/999 \
+curl -sX GET http://localhost:3000/tasks/999 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Test 400 Bad Request (Invalid Credentials):**
 
 ```bash
-curl -sX POST http://localhost:3000/api/login \
+curl -sX POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -731,7 +878,7 @@ curl -sX POST http://localhost:3000/api/login \
 **Test 400 Bad Request (Email Already Registered):**
 
 ```bash
-curl -sX POST http://localhost:3000/api/register \
+curl -sX POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Another John",
@@ -752,7 +899,7 @@ curl -sX POST http://localhost:3000/api/register \
 # macOS: brew install jq
 
 # Gunakan dengan curl
-curl -sX GET http://localhost:3000/api/tasks \
+curl -sX GET http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
@@ -760,7 +907,7 @@ curl -sX GET http://localhost:3000/api/tasks \
 
 ```bash
 # Login dan save token
-export TOKEN=$(curl -s -X POST http://localhost:3000/api/login \
+export TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -776,7 +923,7 @@ echo "Your token: $TOKEN"
 **Method 1 - Gunakan `echo "" &&`:**
 
 ```bash
-echo "" && curl -sX POST http://localhost:3000/api/login \
+echo "" && curl -sX POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -787,17 +934,17 @@ echo "" && curl -sX POST http://localhost:3000/api/login \
 **Method 2 - Untuk multiple requests dengan newline sebelum response:**
 
 ```bash
-echo "" && curl -sX POST http://localhost:3000/api/tasks \
+echo "" && curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Task 1"}' | jq
 
-echo "" && curl -sX POST http://localhost:3000/api/tasks \
+echo "" && curl -sX POST http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Task 2"}' | jq
 
-echo "" && curl -sX GET http://localhost:3000/api/tasks \
+echo "" && curl -sX GET http://localhost:3000/tasks \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
@@ -811,7 +958,7 @@ Simpan sebagai `test-api.sh`:
 BASE_URL="http://localhost:3000"
 
 echo "1. Registering user..."
-curl -sX POST $BASE_URL/api/register \
+curl -sX POST $BASE_URL/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test User",
@@ -820,7 +967,7 @@ curl -sX POST $BASE_URL/api/register \
   }'
 
 echo -e "\n\n2. Logging in..."
-RESPONSE=$(curl -s -X POST $BASE_URL/api/login \
+RESPONSE=$(curl -s -X POST $BASE_URL/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -831,13 +978,13 @@ TOKEN=$(echo $RESPONSE | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 echo "Token: $TOKEN"
 
 echo -e "\n\n3. Creating task..."
-curl -sX POST $BASE_URL/api/tasks \
+curl -sX POST $BASE_URL/tasks \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Test task", "status": "pending"}'
 
 echo -e "\n\n4. Getting all tasks..."
-curl -sX GET $BASE_URL/api/tasks \
+curl -sX GET $BASE_URL/tasks \
   -H "Authorization: Bearer $TOKEN"
 
 echo -e "\n\nDone!"
@@ -890,9 +1037,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/register",
+          "raw": "{{baseUrl}}/auth/register",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "register"]
+          "path": ["auth", "register"]
         }
       }
     },
@@ -911,9 +1058,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/login",
+          "raw": "{{baseUrl}}/auth/login",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "login"]
+          "path": ["auth", "login"]
         }
       }
     },
@@ -928,9 +1075,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/tasks",
+          "raw": "{{baseUrl}}/tasks",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "tasks"]
+          "path": ["tasks"]
         }
       }
     },
@@ -945,9 +1092,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/tasks/1",
+          "raw": "{{baseUrl}}/tasks/1",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "tasks", "1"]
+          "path": ["tasks", "1"]
         }
       }
     },
@@ -970,9 +1117,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           "raw": "{\n  \"title\": \"New Task\",\n  \"description\": \"Task description\",\n  \"status\": \"pending\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/tasks",
+          "raw": "{{baseUrl}}/tasks",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "tasks"]
+          "path": ["tasks"]
         }
       }
     },
@@ -995,9 +1142,26 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           "raw": "{\n  \"title\": \"Updated Title\",\n  \"status\": \"done\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/tasks/1",
+          "raw": "{{baseUrl}}/tasks/1",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "tasks", "1"]
+          "path": ["tasks", "1"]
+        }
+      }
+    },
+    {
+      "name": "Get All Tags",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tasks/tags",
+          "host": ["{{baseUrl}}"],
+          "path": ["tasks", "tags"]
         }
       }
     },
@@ -1012,9 +1176,9 @@ Copy dan paste JSON berikut ke Postman > Import > Raw Text:
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/tasks/1",
+          "raw": "{{baseUrl}}/tasks/1",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "tasks", "1"]
+          "path": ["tasks", "1"]
         }
       }
     }
@@ -1066,13 +1230,16 @@ Dikembalikan ketika:
 - Validasi request gagal
 - Email sudah terdaftar (register)
 - Credentials salah (login)
+- Invalid priority value (harus 'low', 'medium', atau 'high')
+- Invalid date format
+- Terlalu banyak tags (max 10 tags per task)
 
 **Response:**
 
 ```json
 {
   "error": "Bad Request",
-  "message": "Validation failed"
+  "message": "Maximum 10 tags allowed per task"
 }
 ```
 
@@ -1113,8 +1280,12 @@ simple-task-management-api/
 │   ├── eplc-test-api.caddy   # Caddy configuration
 │   ├── eplc-test-api.service # Systemd service
 │   └── README.md             # Quick setup guide
+├── migrations/               # Database migration scripts
+│   └── add-task-enhancements.ts
 ├── src/
 │   ├── db/
+│   │   ├── builders/         # Query builders
+│   │   │   └── taskFilterBuilder.ts
 │   │   ├── index.ts          # Database connection
 │   │   ├── queries.ts        # Database queries
 │   │   └── schema.ts         # Database schema
@@ -1131,6 +1302,7 @@ simple-task-management-api/
 ├── Dockerfile                # Docker configuration
 ├── bun.lock
 ├── docker-compose.yml        # Docker Compose configuration
+├── migrate.ts                # Migration script
 ├── package.json
 ├── README.md
 ├── tasks.db                  # SQLite database file
@@ -1141,15 +1313,16 @@ simple-task-management-api/
 
 ## Quick Reference
 
-| Method | Endpoint         | Auth Required | Description          |
-| ------ | ---------------- | ------------- | -------------------- |
-| POST   | `/api/register`  | No            | Register new user    |
-| POST   | `/api/login`     | No            | Login and get token  |
-| GET    | `/api/tasks`     | Yes           | Get all user's tasks |
-| GET    | `/api/tasks/:id` | Yes           | Get task by ID       |
-| POST   | `/api/tasks`     | Yes           | Create new task      |
-| PUT    | `/api/tasks/:id` | Yes           | Update task          |
-| DELETE | `/api/tasks/:id` | Yes           | Delete task          |
+| Method | Endpoint         | Auth Required | Description                |
+| ------ | ---------------- | ------------- | -------------------------- |
+| POST   | `/auth/register` | No            | Register new user          |
+| POST   | `/auth/login`    | No            | Login and get token        |
+| GET    | `/tasks`         | Yes           | Get all tasks with filters |
+| GET    | `/tasks/tags`    | Yes           | Get all unique tags        |
+| GET    | `/tasks/:id`     | Yes           | Get task by ID             |
+| POST   | `/tasks`         | Yes           | Create new task            |
+| PUT    | `/tasks/:id`     | Yes           | Update task                |
+| DELETE | `/tasks/:id`     | Yes           | Delete task                |
 
 ---
 

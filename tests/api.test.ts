@@ -56,7 +56,7 @@ describe("API Integration Tests", () => {
   });
 
   describe("User Registration", () => {
-    test("POST /api/auth/register - creates user successfully", async () => {
+    test("POST /auth/register - creates user successfully", async () => {
       const { data, error } = await api.auth.register.post({
         name: "Another User",
         email: "another@example.com",
@@ -72,7 +72,7 @@ describe("API Integration Tests", () => {
   });
 
   describe("User Login", () => {
-    test("POST /api/auth/login - returns token successfully", async () => {
+    test("POST /auth/login - returns token successfully", async () => {
       const { data, error } = await api.auth.login.post({
         email: testUser.email,
         password: testUser.password
