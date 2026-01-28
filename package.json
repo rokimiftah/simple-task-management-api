@@ -6,6 +6,7 @@
     "start": "bun run src/index.ts",
     "start:cluster": "bun run src/cluster.ts",
     "test": "bun test",
+    "migrate": "bun migrate.ts",
     "build": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile server src/index.ts",
     "build:cluster": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile server src/cluster.ts",
     "build:linux": "bun build --compile --minify-whitespace --minify-syntax --target bun-linux-x64 --outfile server src/index.ts",
