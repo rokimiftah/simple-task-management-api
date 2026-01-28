@@ -217,8 +217,8 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
       }),
       detail: {
         tags: ["Tasks"],
-        summary: "Delete task",
-        description: "Delete a task by ID. User can only delete their own tasks."
+        summary: "Soft delete task",
+        description: "Soft delete a task by ID (marks as deleted). User can only delete their own tasks."
       }
     }
   );
