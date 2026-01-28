@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/eplc-test-api
-ExecStart=/root/eplc-test-api/server
+ExecStart=/usr/bin/bun run dist/cluster.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production

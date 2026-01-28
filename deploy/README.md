@@ -21,6 +21,12 @@ SSH to your VPS and run:
 # Create deployment directory
 mkdir -p /root/eplc-test-api
 
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+mv ~/.bun/bin/* /usr/local/bin/
+
 # Install Caddy (if not already installed)
 apt install -y debian-keyring debian-archive-keyring apt-transport-https
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
