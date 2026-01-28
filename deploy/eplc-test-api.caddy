@@ -1,0 +1,7 @@
+eplc-test.rokimiftah.id {
+    import dns_cloudflare
+    import encoding
+    import security
+
+    reverse_proxy 127.0.0.1:3001
+}

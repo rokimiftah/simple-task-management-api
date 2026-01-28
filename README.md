@@ -29,13 +29,12 @@ bun install
 
 ### Environment Setup
 
-Copy environment template:
+Environment variables tidak diperlukan untuk development. Server akan berjalan dengan default:
 
-```bash
-cp .env.example .env
-```
+- `PORT`: 3000
+- `NODE_ENV`: development (default)
 
-Edit `.env` sesuai kebutuhan (opsional untuk development).
+Untuk production, environment variables di-set via systemd service.
 
 ## Running the Server
 
@@ -81,7 +80,7 @@ Server akan berjalan di `http://localhost:3000` (atau PORT dari environment vari
 
 ## Deployment
 
-Untuk deployment ke production, lihat panduan lengkap di [DEPLOYMENT.md](DEPLOYMENT.md).
+Untuk deployment ke production, lihat panduan lengkap di [deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md).
 
 ### Quick Docker Deployment
 
@@ -1106,11 +1105,19 @@ Dikembalikan ketika:
 
 ```
 simple-task-management-api/
+├── .github/
+│   └── workflows/
+│       └── deployment.yml    # CI/CD deployment
+├── deploy/                   # Deployment configuration
+│   ├── DEPLOYMENT.md         # Deployment guide
+│   ├── eplc-test-api.caddy   # Caddy configuration
+│   ├── eplc-test-api.service # Systemd service
+│   └── README.md             # Quick setup guide
 ├── src/
 │   ├── db/
 │   │   ├── index.ts          # Database connection
-│   │   ├── schema.ts         # Database schema
-│   │   └── queries.ts        # Database queries
+│   │   ├── queries.ts        # Database queries
+│   │   └── schema.ts         # Database schema
 │   ├── middleware/
 │   │   └── auth.ts           # Authentication middleware
 │   ├── routes/
@@ -1118,18 +1125,16 @@ simple-task-management-api/
 │   │   └── tasks.ts          # Task endpoints
 │   ├── types/
 │   │   └── index.ts          # TypeScript types
-│   ├── index.ts              # Main entry point
-│   └── cluster.ts            # Cluster mode entry point (multi-core)
-├── tasks.db                  # SQLite database file
-├── Dockerfile                # Docker configuration
-├── docker-compose.yml        # Docker Compose configuration
+│   ├── cluster.ts            # Cluster mode entry point (multi-core)
+│   └── index.ts              # Main entry point
 ├── .dockerignore             # Docker ignore file
-├── .env.example              # Environment variables template
-├── DEPLOYMENT.md             # Deployment guide
-├── package.json
-├── tsconfig.json
+├── Dockerfile                # Docker configuration
 ├── bun.lock
-└── README.md
+├── docker-compose.yml        # Docker Compose configuration
+├── package.json
+├── README.md
+├── tasks.db                  # SQLite database file
+└── tsconfig.json
 ```
 
 ---

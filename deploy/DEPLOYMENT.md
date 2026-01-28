@@ -272,15 +272,23 @@ bun build \
 
 ## Environment Variables
 
-Create `.env` file:
+### VPS Deployment (Debian + Caddy)
 
-```env
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=./tasks.db
+Environment variables di-set di systemd service file (`deploy/eplc-test-api.service`):
+
+```ini
+Environment=NODE_ENV=production
+Environment=PORT=3001
 ```
 
-**Important:** The server uses `process.env.PORT ?? 3000` to support cloud platforms like Railway.
+### Cloud Deployment (Railway, Render, Fly.io)
+
+Platform cloud ini menyediakan environment variables secara otomatis:
+
+- `NODE_ENV=production` - di-set otomatis oleh platform
+- `PORT` - di-set otomatis oleh platform (server menggunakan `process.env.PORT ?? 3000`)
+
+**Note:** `DATABASE_URL` tidak digunakan di proyek ini. Database SQLite disimpan di `./tasks.db`.
 
 ---
 
@@ -291,7 +299,6 @@ DATABASE_URL=./tasks.db
 - [ ] Set `NODE_ENV=production`
 - [ ] Compile to binary (`bun run build`)
 - [ ] Remove development dependencies
-- [ ] Secure `.env` files
 - [ ] Use process manager (PM2, systemd)
 
 ### Security
@@ -461,3 +468,264 @@ pm2 monit
 - **ElysiaJS Deployment**: https://elysiajs.com/patterns/deploy.md
 - **Scalar**: https://scalar.com
 - **Bun**: https://bun.sh
+
+---
+
+## VPS Debian + Caddy Deployment
+
+### Overview
+
+Deployment otomatis menggunakan GitHub Actions untuk build dan deploy ke VPS Debian dengan Caddy sebagai reverse proxy dan systemd untuk process management.
+
+### Architecture
+
+```
+GitHub Actions (Build) → VPS (Deploy) → Systemd (Run) → Caddy (Proxy)
+```
+
+1. **Build Phase**: GitHub Actions build binary dengan mode cluster
+2. **Deploy Phase**: Upload binary ke VPS via SSH, restart systemd service
+3. **Runtime**: Systemd menjalankan binary di port 3001, Caddy reverse proxy ke HTTPS
+
+### Prerequisites
+
+#### GitHub Secrets
+
+Setup secrets di GitHub repository settings:
+
+| Secret             | Description                   | Example                                  |
+| ------------------ | ----------------------------- | ---------------------------------------- |
+| `SSH_PRIVATE_KEY`  | Private key untuk SSH ke VPS  | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `SSH_HOST`         | IP atau hostname VPS          | `123.456.789.0`                          |
+| `SSH_USER`         | Username SSH VPS              | `root`                                   |
+| `TARGET_DIRECTORY` | Path folder deployment di VPS | `/root/eplc-test-api`                    |
+
+#### VPS Setup
+
+Install dependencies:
+
+```bash
+# Update system
+apt update && apt upgrade -y
+
+# Install Caddy
+apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+apt update
+apt install caddy -y
+
+# Verify Caddy snippets exist
+ls /etc/caddy/snippets/
+```
+
+### One-time Setup
+
+#### 1. Create Deployment Directory
+
+```bash
+mkdir -p /root/eplc-test-api
+```
+
+#### 2. Create Systemd Service
+
+```bash
+cat > /etc/systemd/system/eplc-test-api.service << 'EOF'
+[Unit]
+Description=Simple Task Management API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/eplc-test-api
+ExecStart=/root/eplc-test-api/server
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3001
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable eplc-test-api
+```
+
+#### 3. Create Caddy Configuration
+
+```bash
+cat > /etc/caddy/sites-available/eplc-test-api.caddy << 'EOF'
+eplc-test.rokimiftah.id {
+    import dns_cloudflare
+    import encoding
+    import security
+
+    reverse_proxy 127.0.0.1:3001
+}
+EOF
+
+ln -s /etc/caddy/sites-available/eplc-test-api.caddy /etc/caddy/sites-enabled/
+caddy reload -c /etc/caddy/Caddyfile
+```
+
+#### 4. Verify Setup
+
+```bash
+# Check systemd service
+systemctl status eplc-test-api
+
+# Check Caddy configuration
+caddy validate -c /etc/caddy/Caddyfile
+
+# Check Caddy status
+systemctl status caddy
+```
+
+### Deployment Process
+
+#### Automatic Deployment
+
+Deployment otomatis trigger saat push ke `main` branch via GitHub Actions.
+
+#### Manual Deployment (Optional)
+
+```bash
+# Local build
+bun install
+bun run build:cluster
+
+# Upload to VPS
+scp server root@your-vps-ip:/root/eplc-test-api/
+
+# SSH to VPS and restart
+ssh root@your-vps-ip
+cd /root/eplc-test-api
+chmod +x server
+systemctl restart eplc-test-api
+```
+
+### Monitoring
+
+#### Check Application Status
+
+```bash
+# Systemd service status
+systemctl status eplc-test-api
+
+# Real-time logs
+journalctl -u eplc-test-api -f
+
+# Last 100 logs
+journalctl -u eplc-test-api -n 100
+
+# Logs since boot
+journalctl -u eplc-test-api -b
+```
+
+#### Check Caddy Status
+
+```bash
+# Caddy service status
+systemctl status caddy
+
+# Caddy logs
+journalctl -u caddy -f
+
+# Validate Caddy config
+caddy validate -c /etc/caddy/Caddyfile
+```
+
+#### Health Check
+
+API menyediakan health check endpoint:
+
+```bash
+# Local (di VPS)
+curl http://localhost:3001/health
+
+# Public (via HTTPS)
+curl https://eplc-test.rokimiftah.id/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-28T10:00:00.000Z"
+}
+```
+
+### Database
+
+#### Location
+
+Database SQLite disimpan di:
+
+```
+/root/eplc-test-api/tasks.db
+```
+
+Database akan otomatis dibuat saat pertama kali dijalankan.
+
+#### Backup (Manual)
+
+```bash
+# Backup database
+cp /root/eplc-test-api/tasks.db /root/eplc-test-api/tasks.db.backup
+
+# Restore database
+cp /root/eplc-test-api/tasks.db.backup /root/eplc-test-api/tasks.db
+```
+
+### Troubleshooting
+
+#### Service Won't Start
+
+```bash
+# Check logs
+journalctl -u eplc-test-api -n 50
+
+# Check if binary exists
+ls -la /root/eplc-test-api/server
+
+# Check if port is in use
+ss -tlnp | grep 3001
+
+# Test binary manually
+cd /root/eplc-test-api
+./server
+```
+
+#### Caddy Not Proxying
+
+```bash
+# Check Caddy configuration
+caddy validate -c /etc/caddy/Caddyfile
+
+# Check Caddy logs
+journalctl -u caddy -n 50
+
+# Check if site is enabled
+ls -la /etc/caddy/sites-enabled/
+
+# Reload Caddy
+caddy reload -c /etc/caddy/Caddyfile
+```
+
+#### Deployment Failed
+
+```bash
+# Check GitHub Actions logs di repository Actions tab
+
+# Verify SSH access
+ssh -i ~/.ssh/id_ed25519 root@your-vps-ip
+
+# Verify directory exists
+ls -la /root/eplc-test-api
+
+# Verify permissions
+ls -la /root/eplc-test-api/server
+```

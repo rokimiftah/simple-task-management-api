@@ -1,0 +1,53 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+jobs:
+  Build-and-Deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 400 ~/.ssh/id_ed25519
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies and build
+        run: |
+          bun install --frozen-lockfile
+          bun run build:cluster
+          tar -czf build.tar.gz server
+
+      - name: Upload build to VPS
+        run: |
+          scp -i ~/.ssh/id_ed25519 build.tar.gz ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_DIRECTORY }}/build.tar.gz
+
+      - name: Deploy application on VPS
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "
+            cd ${{ secrets.TARGET_DIRECTORY }}
+            mv -f build.tar.gz build.tar.gz.old 2>/dev/null || true
+            tar -xzvf build.tar.gz
+            rm -f build.tar.gz build.tar.gz.old
+            chmod +x server
+            systemctl restart eplc-test-api
+            systemctl status eplc-test-api --no-pager
+            caddy reload -c /etc/caddy/Caddyfile
+          "

@@ -1,0 +1,16 @@
+[Unit]
+Description=Simple Task Management API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/eplc-test-api
+ExecStart=/root/eplc-test-api/server
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3001
+
+[Install]
+WantedBy=multi-user.target
