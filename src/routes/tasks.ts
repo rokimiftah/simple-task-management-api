@@ -7,16 +7,38 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
   .use(authMiddleware)
   .get(
     "/tasks",
-    ({ userId }) => {
+    ({ userId, query }) => {
       if (!userId) return [];
-      const tasks = taskQueries.findAllTasks(userId);
-      return tasks;
+
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 10;
+
+      const tasks = taskQueries.findAllTasks(userId, page, limit);
+      const total = taskQueries.countTasks(userId);
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: tasks,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      };
     },
     {
+      query: t.Object({
+        page: t.Optional(t.Numeric({ minimum: 1 })),
+        limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 }))
+      }),
       detail: {
         tags: ["Tasks"],
         summary: "Get all tasks",
-        description: "Retrieve all tasks belonging to the authenticated user, ordered by creation date descending."
+        description:
+          "Retrieve all tasks belonging to the authenticated user, ordered by creation date descending. Supports pagination via query parameters: page (default: 1) and limit (default: 10, max: 100)."
       }
     }
   )
