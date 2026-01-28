@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies and build
         run: |
           bun install --frozen-lockfile
-          bun run build:cluster
+          bun run build:linux-cluster
           tar -czf build.tar.gz server
 
       - name: Upload build to VPS
