@@ -29,11 +29,10 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install dependencies and build
+      - name: Install dependencies and archive
         run: |
           bun install --frozen-lockfile
-          bun run build:js-cluster
-          tar -czf build.tar.gz dist/ node_modules/ package.json
+          tar -czf build.tar.gz src/ node_modules/ package.json
 
       - name: Upload build to VPS
         run: |
@@ -45,7 +44,7 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.TARGET_DIRECTORY }}
             if [ -f build.tar.gz ]; then
-              rm -rf dist node_modules package.json.bak
+              rm -rf src node_modules package.json.bak
               mv package.json package.json.bak 2>/dev/null || true
               tar -xzvf build.tar.gz
               rm -f build.tar.gz
