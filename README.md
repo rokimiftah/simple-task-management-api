@@ -98,9 +98,9 @@ docker run -d -p 3000:3000 --name elysia-api elysia-api:latest
 - **Railway**: `railway login && railway init && railway up`
 - **Render**: Connect GitHub repo, set build command `bun install && bun run build`, start command `./server`
 - **Fly.io**: `flyctl launch && flyctl deploy`
-- **VPS**: Build binary with `bun run build:linux`, then run with `./server` or PM2
+- **VPS**: Lihat [deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md) untuk panduan deployment VPS dengan Caddy
 
-Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk detail lengkap termasuk cluster mode dan compile to binary.
+Lihat [deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md) untuk detail lengkap termasuk cluster mode dan compile to binary.
 
 ### API Documentation
 

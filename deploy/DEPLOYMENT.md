@@ -187,6 +187,8 @@ flyctl deploy
 
 ### Option 4: VPS (DigitalOcean, Linode, AWS EC2)
 
+**Note:** Untuk deployment VPS dengan Caddy reverse proxy dan systemd, lihat panduan lengkap di [VPS Debian + Caddy Deployment](#vps-debian--caddy-deployment).
+
 ```bash
 # Clone repository
 git clone <your-repo-url>
@@ -587,22 +589,29 @@ systemctl status caddy
 
 #### Automatic Deployment
 
-Deployment otomatis trigger saat push ke `main` branch via GitHub Actions.
+Deployment otomatis trigger saat push ke `main` branch via GitHub Actions:
+
+1. GitHub Actions SSH ke VPS
+2. VPS menjalankan `git fetch` dan `git reset --hard origin/main`
+3. VPS install dependencies dengan `bun install`
+4. VPS restart systemd service
+5. Caddy reload configuration
 
 #### Manual Deployment (Optional)
 
 ```bash
-# Local build
-bun install
-bun run build:cluster
-
-# Upload to VPS
-scp server root@your-vps-ip:/root/eplc-test-api/
-
-# SSH to VPS and restart
+# SSH to VPS
 ssh root@your-vps-ip
 cd /root/eplc-test-api
-chmod +x server
+
+# Pull latest changes
+git fetch origin main
+git reset --hard origin/main
+
+# Install dependencies
+bun install
+
+# Restart service
 systemctl restart eplc-test-api
 ```
 
