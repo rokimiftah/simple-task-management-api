@@ -52,7 +52,7 @@ export const authMiddleware = (app: Elysia) =>
 
       return {
         isValid: true,
-        userId,
+        userId
       };
     })
     .onBeforeHandle(({ isValid, set }) => {
@@ -60,7 +60,7 @@ export const authMiddleware = (app: Elysia) =>
         set.status = 401;
         return {
           error: "Unauthorized",
-          message: "Invalid or missing token",
+          message: "Invalid or missing token"
         };
       }
     });

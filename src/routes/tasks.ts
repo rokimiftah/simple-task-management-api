@@ -5,11 +5,21 @@ import type { CreateTaskInput, UpdateTaskInput } from "../types";
 
 export const taskRoutes = new Elysia({ prefix: "/api" })
   .use(authMiddleware)
-  .get("/tasks", ({ userId }) => {
-    if (!userId) return [];
-    const tasks = taskQueries.findAllTasks(userId);
-    return tasks;
-  })
+  .get(
+    "/tasks",
+    ({ userId }) => {
+      if (!userId) return [];
+      const tasks = taskQueries.findAllTasks(userId);
+      return tasks;
+    },
+    {
+      detail: {
+        tags: ["Tasks"],
+        summary: "Get all tasks",
+        description: "Retrieve all tasks belonging to the authenticated user, ordered by creation date descending."
+      }
+    }
+  )
   .get(
     "/tasks/:id",
     ({ params, userId, set }) => {
@@ -17,7 +27,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 401;
         return {
           error: "Unauthorized",
-          message: "Invalid token",
+          message: "Invalid token"
         };
       }
 
@@ -27,7 +37,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 404;
         return {
           error: "Not Found",
-          message: "Task not found",
+          message: "Task not found"
         };
       }
 
@@ -35,9 +45,14 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
     },
     {
       params: t.Object({
-        id: t.String(),
+        id: t.String()
       }),
-    },
+      detail: {
+        tags: ["Tasks"],
+        summary: "Get task by ID",
+        description: "Retrieve a specific task by its ID. User can only access their own tasks."
+      }
+    }
   )
   .post(
     "/tasks",
@@ -46,7 +61,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 401;
         return {
           error: "Unauthorized",
-          message: "Invalid token",
+          message: "Invalid token"
         };
       }
 
@@ -55,7 +70,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
       try {
         const result = taskQueries.createTask({
           ...taskInput,
-          userId,
+          userId
         });
 
         const task = taskQueries.findTaskById(result.lastInsertRowid, userId);
@@ -67,7 +82,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 400;
         return {
           error: "Bad Request",
-          message: "Failed to create task",
+          message: "Failed to create task"
         };
       }
     },
@@ -75,9 +90,14 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
       body: t.Object({
         title: t.String({ minLength: 1 }),
         description: t.Optional(t.String()),
-        status: t.Union([t.Literal("pending"), t.Literal("done")]),
+        status: t.Union([t.Literal("pending"), t.Literal("done")])
       }),
-    },
+      detail: {
+        tags: ["Tasks"],
+        summary: "Create new task",
+        description: "Create a new task for the authenticated user. Title is required, description and status are optional."
+      }
+    }
   )
   .put(
     "/tasks/:id",
@@ -86,7 +106,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 401;
         return {
           error: "Unauthorized",
-          message: "Invalid token",
+          message: "Invalid token"
         };
       }
 
@@ -99,7 +119,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 404;
         return {
           error: "Not Found",
-          message: "Task not found",
+          message: "Task not found"
         };
       }
 
@@ -107,7 +127,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         taskQueries.updateTask({
           ...taskInput,
           id: taskId,
-          userId,
+          userId
         });
 
         const updatedTask = taskQueries.findTaskById(taskId, userId);
@@ -118,22 +138,27 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 400;
         return {
           error: "Bad Request",
-          message: "Failed to update task",
+          message: "Failed to update task"
         };
       }
     },
     {
       params: t.Object({
-        id: t.String(),
+        id: t.String()
       }),
       body: t.Partial(
         t.Object({
           title: t.String({ minLength: 1 }),
           description: t.String(),
-          status: t.Union([t.Literal("pending"), t.Literal("done")]),
-        }),
+          status: t.Union([t.Literal("pending"), t.Literal("done")])
+        })
       ),
-    },
+      detail: {
+        tags: ["Tasks"],
+        summary: "Update task",
+        description: "Update a task by ID. Supports partial updates - only provide fields that need to be changed."
+      }
+    }
   )
   .delete(
     "/tasks/:id",
@@ -142,7 +167,7 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 401;
         return {
           error: "Unauthorized",
-          message: "Invalid token",
+          message: "Invalid token"
         };
       }
 
@@ -154,19 +179,24 @@ export const taskRoutes = new Elysia({ prefix: "/api" })
         set.status = 404;
         return {
           error: "Not Found",
-          message: "Task not found",
+          message: "Task not found"
         };
       }
 
       taskQueries.deleteTask(taskId, userId);
 
       return {
-        message: "Task deleted successfully",
+        message: "Task deleted successfully"
       };
     },
     {
       params: t.Object({
-        id: t.String(),
+        id: t.String()
       }),
-    },
+      detail: {
+        tags: ["Tasks"],
+        summary: "Delete task",
+        description: "Delete a task by ID. User can only delete their own tasks."
+      }
+    }
   );

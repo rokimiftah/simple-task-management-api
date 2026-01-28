@@ -9,6 +9,7 @@ REST API untuk sistem manajemen tugas sederhana dengan fungsionalitas CRUD lengk
 - **Language**: TypeScript 5.x
 - **Database**: SQLite (bun:sqlite)
 - **Password Hashing**: bcrypt
+- **API Documentation**: Scalar UI (@elysiajs/openapi)
 
 ## Installation
 
@@ -26,6 +27,16 @@ curl -fsSL https://bun.sh/install | bash
 bun install
 ```
 
+### Environment Setup
+
+Copy environment template:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` sesuai kebutuhan (opsional untuk development).
+
 ## Running the Server
 
 ### Development Mode
@@ -38,9 +49,98 @@ Server akan berjalan di `http://localhost:3000` dengan hot-reload enabled.
 
 ### Production Mode
 
+**Option 1: Run with Bun**
+
 ```bash
-bun run src/index.ts
+bun run start
 ```
+
+**Option 2: Build and Run Binary (Recommended)**
+
+```bash
+# Build binary
+bun run build
+
+# Run binary (no Bun required)
+./server
+```
+
+**Option 3: Cluster Mode (Multi-Core)**
+
+```bash
+# Build cluster binary
+bun run build:cluster
+
+# Run with all CPU cores
+./server
+```
+
+Server akan berjalan di `http://localhost:3000` (atau PORT dari environment variable).
+
+---
+
+## Deployment
+
+Untuk deployment ke production, lihat panduan lengkap di [DEPLOYMENT.md](DEPLOYMENT.md).
+
+### Quick Docker Deployment
+
+```bash
+# Build dan start dengan Docker Compose
+docker-compose up -d
+
+# Atau build manual dengan Docker
+docker build -t elysia-api:latest .
+docker run -d -p 3000:3000 --name elysia-api elysia-api:latest
+```
+
+### Cloud Deployment Options
+
+- **Railway**: `railway login && railway init && railway up`
+- **Render**: Connect GitHub repo, set build command `bun install && bun run build`, start command `./server`
+- **Fly.io**: `flyctl launch && flyctl deploy`
+- **VPS**: Build binary with `bun run build:linux`, then run with `./server` or PM2
+
+Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk detail lengkap termasuk cluster mode dan compile to binary.
+
+### API Documentation
+
+Scalar UI documentation tersedia di:
+
+```
+http://localhost:3000/docs
+```
+
+Dokumentasi ini menggunakan konfigurasi Scalar berikut:
+
+- **Theme**: default
+- **Layout**: modern
+- **Sidebar**: hidden
+- **Default Open All Tags**: true
+- **Expand All Model Sections**: true
+- **Expand All Responses**: true
+- **Hide Client Button**: true
+- **Hide Search**: true
+- **Developer Tools**: localhost only
+- **Toolbar**: localhost only
+- **Operation Title Source**: summary
+- **Persist Auth**: false
+- **Telemetry**: true
+- **Models**: visible
+- **Document Download Type**: both
+- **Dark Mode Toggle**: visible
+- **Default Fonts**: enabled
+- **Schema Properties Order**: alphabetical
+- **Required Properties**: first
+
+Fitur yang tersedia:
+
+- Interactive API documentation
+- Try-it-out feature untuk testing langsung
+- Schema definitions untuk request/response
+- Authentication setup dengan Bearer token
+- Download dokumentasi (JSON/YAML)
+- Dark mode support
 
 ## Database
 
@@ -1018,8 +1118,14 @@ simple-task-management-api/
 │   │   └── tasks.ts          # Task endpoints
 │   ├── types/
 │   │   └── index.ts          # TypeScript types
-│   └── index.ts              # Main entry point
+│   ├── index.ts              # Main entry point
+│   └── cluster.ts            # Cluster mode entry point (multi-core)
 ├── tasks.db                  # SQLite database file
+├── Dockerfile                # Docker configuration
+├── docker-compose.yml        # Docker Compose configuration
+├── .dockerignore             # Docker ignore file
+├── .env.example              # Environment variables template
+├── DEPLOYMENT.md             # Deployment guide
 ├── package.json
 ├── tsconfig.json
 ├── bun.lock

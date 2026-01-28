@@ -16,24 +16,24 @@ export const authRoutes = new Elysia({ prefix: "/api" })
           set.status = 400;
           return {
             error: "Bad Request",
-            message: "Email already registered",
+            message: "Email already registered"
           };
         }
 
         const hashedPassword = await Bun.password.hash(password, {
-          algorithm: "bcrypt",
+          algorithm: "bcrypt"
         });
 
         const result = authQueries.createUser({
           name,
           email,
-          password: hashedPassword,
+          password: hashedPassword
         });
 
         const newUser: UserResponse = {
           id: result.lastInsertRowid,
           name,
-          email,
+          email
         };
 
         set.status = 201;
@@ -43,7 +43,7 @@ export const authRoutes = new Elysia({ prefix: "/api" })
         set.status = 500;
         return {
           error: "Internal Server Error",
-          message: "Failed to create user",
+          message: "Failed to create user"
         };
       }
     },
@@ -51,9 +51,14 @@ export const authRoutes = new Elysia({ prefix: "/api" })
       body: t.Object({
         name: t.String({ minLength: 1 }),
         email: t.String({ format: "email" }),
-        password: t.String({ minLength: 6 }),
+        password: t.String({ minLength: 6 })
       }),
-    },
+      detail: {
+        tags: ["Authentication"],
+        summary: "Register new user",
+        description: "Create a new user account with name, email, and password. Password will be hashed using bcrypt."
+      }
+    }
   )
   .post(
     "/login",
@@ -67,7 +72,7 @@ export const authRoutes = new Elysia({ prefix: "/api" })
           set.status = 404;
           return {
             error: "Not Found",
-            message: "User not found",
+            message: "User not found"
           };
         }
 
@@ -77,7 +82,7 @@ export const authRoutes = new Elysia({ prefix: "/api" })
           set.status = 400;
           return {
             error: "Bad Request",
-            message: "Invalid credentials",
+            message: "Invalid credentials"
           };
         }
 
@@ -88,8 +93,8 @@ export const authRoutes = new Elysia({ prefix: "/api" })
           user: {
             id: user.id,
             name: user.name,
-            email: user.email,
-          },
+            email: user.email
+          }
         };
 
         return response;
@@ -98,14 +103,19 @@ export const authRoutes = new Elysia({ prefix: "/api" })
         set.status = 500;
         return {
           error: "Internal Server Error",
-          message: "Login failed",
+          message: "Login failed"
         };
       }
     },
     {
       body: t.Object({
         email: t.String({ format: "email" }),
-        password: t.String(),
+        password: t.String()
       }),
-    },
+      detail: {
+        tags: ["Authentication"],
+        summary: "Login user",
+        description: "Authenticate user with email and password. Returns a Bearer token for authentication."
+      }
+    }
   );
