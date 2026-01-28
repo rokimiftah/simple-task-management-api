@@ -44,7 +44,7 @@ describe("GET /tasks with pagination", () => {
   test("returns paginated response with default page 1 and limit 10", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks", {
+      new Request("http://localhost/tasks", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -70,7 +70,7 @@ describe("GET /tasks with pagination", () => {
   test("returns second page with 10 items", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=2&limit=10", {
+      new Request("http://localhost/tasks?page=2&limit=10", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -93,7 +93,7 @@ describe("GET /tasks with pagination", () => {
   test("returns last page with remaining items", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=3&limit=10", {
+      new Request("http://localhost/tasks?page=3&limit=10", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -116,7 +116,7 @@ describe("GET /tasks with pagination", () => {
   test("validates page parameter with minimum value 1", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=0&limit=10", {
+      new Request("http://localhost/tasks?page=0&limit=10", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -129,7 +129,7 @@ describe("GET /tasks with pagination", () => {
   test("validates limit parameter with minimum value 1", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=1&limit=0", {
+      new Request("http://localhost/tasks?page=1&limit=0", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -142,7 +142,7 @@ describe("GET /tasks with pagination", () => {
   test("validates limit parameter with maximum value 100", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=1&limit=101", {
+      new Request("http://localhost/tasks?page=1&limit=101", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -155,7 +155,7 @@ describe("GET /tasks with pagination", () => {
   test("accepts valid limit of 100", async () => {
     const app = new Elysia().use(taskRoutes);
     const response = await app.handle(
-      new Request("http://localhost/api/tasks?page=1&limit=100", {
+      new Request("http://localhost/tasks?page=1&limit=100", {
         headers: {
           Authorization: `Bearer ${authToken}`
         }

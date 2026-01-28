@@ -3,7 +3,7 @@ import { authMiddleware } from "../middleware/auth";
 import { Elysia, t } from "elysia";
 import type { CreateTaskInput, UpdateTaskInput } from "../types";
 
-export const taskRoutes = new Elysia({ prefix: "/api" })
+export const taskRoutes = new Elysia()
   .use(authMiddleware)
   .get(
     "/tasks",

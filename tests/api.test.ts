@@ -11,8 +11,13 @@ describe("API Integration Tests", () => {
   let api: ReturnType<typeof treaty>;
   let authToken: string;
   let _userId: number;
+  const testUser = {
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123"
+  };
 
-  beforeAll(() => {
+  beforeAll(async () => {
     initializeDatabase();
     const db = getDb();
 
@@ -22,6 +27,22 @@ describe("API Integration Tests", () => {
     const app = new Elysia().use(loggerMiddleware).use(authRoutes).use(taskRoutes);
 
     api = treaty(app);
+
+    const registerResponse = await api.auth.register.post(testUser);
+    if (registerResponse.error) {
+      throw new Error(`Failed to create test user: ${registerResponse.error.message}`);
+    }
+
+    const loginResponse = await api.auth.login.post({
+      email: testUser.email,
+      password: testUser.password
+    });
+    if (loginResponse.error || !loginResponse.data?.token) {
+      throw new Error(`Failed to login test user: ${loginResponse.error?.message || "No token received"}`);
+    }
+
+    authToken = loginResponse.data.token;
+    _userId = loginResponse.data.user.id;
   });
 
   afterAll(() => {
@@ -37,15 +58,15 @@ describe("API Integration Tests", () => {
   describe("User Registration", () => {
     test("POST /api/auth/register - creates user successfully", async () => {
       const { data, error } = await api.auth.register.post({
-        name: "Test User",
-        email: "test@example.com",
-        password: "password123"
+        name: "Another User",
+        email: "another@example.com",
+        password: "password456"
       });
 
       expect(error).toBeNull();
       expect(data).toBeDefined();
-      expect(data?.email).toBe("test@example.com");
-      expect(data?.name).toBe("Test User");
+      expect(data?.email).toBe("another@example.com");
+      expect(data?.name).toBe("Another User");
       expect(data?.id).toBeNumber();
     });
   });
@@ -53,25 +74,23 @@ describe("API Integration Tests", () => {
   describe("User Login", () => {
     test("POST /api/auth/login - returns token successfully", async () => {
       const { data, error } = await api.auth.login.post({
-        email: "test@example.com",
-        password: "password123"
+        email: testUser.email,
+        password: testUser.password
       });
 
       expect(error).toBeNull();
       expect(data).toBeDefined();
       expect(data?.token).toBeString();
       expect(data?.user).toBeDefined();
-      expect(data?.user.id).toBeNumber();
-
-      authToken = data?.token;
-      _userId = data?.user.id;
+      expect(data?.user.email).toBe(testUser.email);
+      expect(data?.user.name).toBe(testUser.name);
     });
   });
 
   describe("GET /tasks with pagination", () => {
     beforeAll(async () => {
       for (let i = 1; i <= 15; i++) {
-        await api.api.tasks.post(
+        await api.tasks.post(
           {
             title: `Task ${i}`,
             description: `Description for task ${i}`,
@@ -85,7 +104,7 @@ describe("API Integration Tests", () => {
     });
 
     test("returns default pagination (page=1, limit=10)", async () => {
-      const { data, error } = await api.api.tasks.get({
+      const { data, error } = await api.tasks.get({
         query: {},
         headers: { Authorization: `Bearer ${authToken}` }
       });
@@ -104,7 +123,7 @@ describe("API Integration Tests", () => {
     });
 
     test("returns second page (page=2, limit=10)", async () => {
-      const { data, error } = await api.api.tasks.get({
+      const { data, error } = await api.tasks.get({
         query: { page: "2", limit: "10" },
         headers: { Authorization: `Bearer ${authToken}` }
       });
@@ -122,7 +141,7 @@ describe("API Integration Tests", () => {
     });
 
     test("returns custom limit (limit=5)", async () => {
-      const { data, error } = await api.api.tasks.get({
+      const { data, error } = await api.tasks.get({
         query: { limit: "5" },
         headers: { Authorization: `Bearer ${authToken}` }
       });
@@ -144,7 +163,7 @@ describe("API Integration Tests", () => {
     let taskId: number;
 
     beforeAll(async () => {
-      const { data } = await api.api.tasks.post(
+      const { data } = await api.tasks.post(
         {
           title: "Task to delete",
           description: "This task will be soft deleted",
@@ -158,7 +177,7 @@ describe("API Integration Tests", () => {
     });
 
     test("soft deletes task successfully", async () => {
-      const { data, error } = await api.api.tasks({ id: taskId.toString() }).delete({
+      const { data, error } = await api.tasks({ id: taskId.toString() }).delete(undefined, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
 
@@ -167,7 +186,8 @@ describe("API Integration Tests", () => {
     });
 
     test("GET /tasks/:id returns 404 for soft deleted task", async () => {
-      const { error } = await api.api.tasks({ id: taskId.toString() }).get({
+      const { error } = await api.tasks({ id: taskId.toString() }).get({
+        query: undefined,
         headers: { Authorization: `Bearer ${authToken}` }
       });
 
@@ -175,7 +195,7 @@ describe("API Integration Tests", () => {
     });
 
     test("task not in list after soft delete", async () => {
-      const { data, error } = await api.api.tasks.get({
+      const { data, error } = await api.tasks.get({
         query: {},
         headers: { Authorization: `Bearer ${authToken}` }
       });
