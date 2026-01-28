@@ -37,17 +37,22 @@ jobs:
 
       - name: Upload build to VPS
         run: |
+          ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.TARGET_DIRECTORY }}"
           scp -i ~/.ssh/id_ed25519 build.tar.gz ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_DIRECTORY }}/build.tar.gz
 
       - name: Deploy application on VPS
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{secrets.SSH_USER}}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.TARGET_DIRECTORY }}
-            mv -f build.tar.gz build.tar.gz.old 2>/dev/null || true
-            tar -xzvf build.tar.gz
-            rm -f build.tar.gz build.tar.gz.old
-            chmod +x server
-            systemctl restart eplc-test-api
-            systemctl status eplc-test-api --no-pager
-            caddy reload -c /etc/caddy/Caddyfile
+            if [ -f build.tar.gz ]; then
+              tar -xzvf build.tar.gz
+              rm -f build.tar.gz
+              chmod +x server
+              systemctl restart eplc-test-api
+              systemctl status eplc-test-api --no-pager
+              caddy reload -c /etc/caddy/Caddyfile
+            else
+              echo 'Error: build.tar.gz not found'
+              exit 1
+            fi
           "
