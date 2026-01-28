@@ -21,43 +21,36 @@ cd /root/eplc-test-api || exit 1
 echo "Project directory: $(pwd)"
 echo ""
 
+# Check if Bun is installed
+if ! command -v bun &> /dev/null; then
+  echo "Error: Bun is not installed. Please install Bun first."
+  echo "Install: curl -fsSL https://bun.sh/install | bash"
+  exit 1
+fi
+
 # Backup database before migration
 echo "Step 1: Creating backup..."
 cp tasks.db tasks.db.backup-$(date +%Y%m%d-%H%M%S)
 echo "Backup created: tasks.db.backup-$(date +%Y%m%d-%H%M%S)"
 echo ""
 
-# Check if deleted_at column exists
-echo "Step 2: Checking current schema..."
-COLUMN_EXISTS=$(sqlite3 tasks.db "PRAGMA table_info(tasks);" | grep -c "deleted_at" || echo "0")
+# Run migration using Bun
+echo "Step 2: Running migration..."
+bun migrate || {
+  echo "Migration failed. Restoring backup..."
+  cp tasks.db.backup-$(date +%Y%m%d-%H%M%S) tasks.db
+  exit 1
+}
 
-if [ "$COLUMN_EXISTS" -eq "0" ]; then
-  echo "Column 'deleted_at' NOT found. Will add it now..."
-  echo ""
+echo ""
 
-  # Add deleted_at column
-  echo "Step 3: Adding deleted_at column..."
-  sqlite3 tasks.db "ALTER TABLE tasks ADD COLUMN deleted_at DATETIME;"
-  echo "Column added successfully!"
-  echo ""
+echo "Step 3: Restarting service..."
+systemctl restart eplc-test-api
+sleep 3
+systemctl status eplc-test-api --no-pager
 
-  # Verify
-  echo "Step 4: Verifying column was added..."
-  sqlite3 tasks.db "PRAGMA table_info(tasks);" | grep deleted_at
-  echo ""
-
-  echo "Step 5: Restarting service..."
-  systemctl restart eplc-test-api
-  sleep 3
-  systemctl status eplc-test-api --no-pager
-  echo ""
-
-  echo "=== Migration completed successfully! ==="
-else
-  echo "Column 'deleted_at' already exists. Nothing to do."
-  echo ""
-  echo "=== Skipping migration ==="
-fi
+echo ""
+echo "=== Migration completed successfully! ==="
 
 echo ""
 echo "Testing endpoint now..."
