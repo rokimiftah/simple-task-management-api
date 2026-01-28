@@ -1,5 +1,5 @@
-import type { Task } from "./index";
 import { describe, expect, test } from "bun:test";
+import type { Task } from "./index";
 
 describe("Task Type", () => {
   test("Task interface includes deleted_at field", () => {
